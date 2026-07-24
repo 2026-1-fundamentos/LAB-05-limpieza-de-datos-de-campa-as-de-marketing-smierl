@@ -50,6 +50,174 @@ def clean_campaign_data():
 
     """
 
+    import pandas as pd
+    import glob
+    import os
+
+    input_path = "files/input/*.csv.zip"
+    output_path = "files/output/"
+
+    os.makedirs(output_path, exist_ok=True)
+
+
+    # Leer archivos comprimidos directamente
+    files = glob.glob(input_path)
+
+    data = pd.concat(
+        (
+            pd.read_csv(file, compression="zip")
+            for file in files
+        ),
+        ignore_index=True
+    )
+
+
+    # Eliminar columna de índice si existe
+    data.drop(
+        columns=["Unnamed: 0"],
+        errors="ignore",
+        inplace=True
+    )
+
+
+    # ==========================
+    # CLIENT
+    # ==========================
+
+    client = data[
+        [
+            "client_id",
+            "age",
+            "job",
+            "marital",
+            "education",
+            "credit_default",
+            "mortgage"
+        ]
+    ].copy()
+
+
+    client["job"] = (
+        client["job"]
+        .str.replace(".", "", regex=False)
+        .str.replace("-", "_", regex=False)
+    )
+
+
+    client["education"] = (
+        client["education"]
+        .str.replace(".", "_", regex=False)
+        .replace("unknown", pd.NA)
+    )
+
+
+    client["credit_default"] = (
+        client["credit_default"]
+        .eq("yes")
+        .astype("int8")
+    )
+
+
+    client["mortgage"] = (
+        client["mortgage"]
+        .eq("yes")
+        .astype("int8")
+    )
+
+
+    client.to_csv(
+        output_path + "client.csv",
+        index=False
+    )
+
+
+    # ==========================
+    # CAMPAIGN
+    # ==========================
+
+    campaign = data[
+        [
+            "client_id",
+            "number_contacts",
+            "contact_duration",
+            "previous_campaign_contacts",
+            "previous_outcome",
+            "campaign_outcome",
+            "day",
+            "month"
+        ]
+    ].copy()
+
+
+    campaign["previous_outcome"] = (
+        campaign["previous_outcome"]
+        .eq("success")
+        .astype("int8")
+    )
+
+
+    campaign["campaign_outcome"] = (
+        campaign["campaign_outcome"]
+        .eq("yes")
+        .astype("int8")
+    )
+
+
+    months = {
+        "jan": "01",
+        "feb": "02",
+        "mar": "03",
+        "apr": "04",
+        "may": "05",
+        "jun": "06",
+        "jul": "07",
+        "aug": "08",
+        "sep": "09",
+        "oct": "10",
+        "nov": "11",
+        "dec": "12"
+    }
+
+
+    campaign["last_contact_date"] = pd.to_datetime(
+        "2022-"
+        + campaign["month"].map(months)
+        + "-"
+        + campaign["day"].astype(str)
+    )
+
+
+    campaign.drop(
+        columns=["day", "month"],
+        inplace=True
+    )
+
+
+    campaign.to_csv(
+        output_path + "campaign.csv",
+        index=False
+    )
+
+
+    # ==========================
+    # ECONOMICS
+    # ==========================
+
+    economics = data[
+        [
+            "client_id",
+            "cons_price_idx",
+            "euribor_three_months"
+        ]
+    ].copy()
+
+
+    economics.to_csv(
+        output_path + "economics.csv",
+        index=False
+    )
+
+
     return
 
 
